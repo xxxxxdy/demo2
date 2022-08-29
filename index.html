@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Barcode Curve</title>
+  <link href='https://unpkg.com/boxicons@2.0.9/css/boxicons.min.css' rel='stylesheet'>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://d3js.org/d3.v5.js"></script>
+</head>
+
+<body>
+  <nav class="toolbar">
+    <div class="toolbar-title">
+      <span class="shrink-btn">
+        <i class='bx bx-chevron-left'></i>
+      </span>
+      <h2 class="hide">barcode curve</h3>
+    </div>
+
+    <div class="hide" id="option">
+      dataset
+      <select class="dataset">
+        <option>test</option>
+        <option>自定义</option>    
+      </select>
+      <input type="file" id="filename" style="display:none"/>
+    </div>
+
+    <div class="toolbar-params">
+      <div class="hide">
+        <h4>Parameters</h4>
+        <ul>
+          <li class="tooltip-element">
+            x-axis terminal
+            <input type="text" value="0" id="x-text"/>
+            <input type="range" min="0" max="100" step="1" value="0" id="x-range"/>
+          </li>
+          <li class="tooltip-element">
+            y-axis terminal
+            <input type="text" value="0" id="y-text"/>
+            <input type="range" min="0" max="100" step="1" value="0" id="y-range"/>
+          </li>
+          <li class="tooltip-element">
+            show number
+            <label class="switch">
+              <input type="checkbox" checked>
+              <div class="slider round"></div>
+            </label>
+          </li>
+          
+        </ul>
+      </div> 
+    </div>
+  </nav>
+
+  <main>
+    <div class="line-chart"></div>
+    <div class="barcode"></div>
+    <div class="tree"></div>
+  </main>
+  
+  <script src="app.js"></script>
+  <script src="testdata.js"></script>
+  <script src="linechart.js"></script>
+  <script src="barcode.js"></script>
+  
+</body>
+
+</html>
