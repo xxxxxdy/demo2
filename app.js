@@ -17,17 +17,76 @@ shrink_btn.addEventListener("click", () => {
   }, 500);
 });
 
-file.onchange = function(){
-  if(file.value === file.options[file.length-1].value){
-    input.click();
-  }
-  if(file.value === file.options[0].value){
+/* 暂时不考虑第一行是标签的情况 */
 
+const max_data_type = 50;
+const max_data_length = 3000;
+
+function readTxtFile(filename, callback){
+  var reader = new FileReader();
+  reader.readAsText(filename);
+  reader.onload = function(e){
+    var content = e.target.result;
+    datas.splice(0, datas.length);
+    // console.log(content);
+    var datalist = content.split("\n");
+    for(let i=0; i<  datalist.length; i++){
+      if(i > max_data_length) break;
+      if(datalist[i].length < 1) continue;
+      var dataEachTime = datalist[i].split(",");
+      if(Number(dataEachTime[0])!==Number(dataEachTime[0])){
+        var dataTime = [dataEachTime[0]];
+        dataTime.push.apply(dataTime, dataEachTime.slice(1, max_data_type+1).map(Number));
+        datas.push(dataTime);
+      }
+      else
+        datas.push(dataEachTime.slice(0, max_data_type+1).map(Number));
+    }
+    // console.log(datas);
+    callback();
   }
 }
 
-/*
-function readFile(filename){
+
+file.onchange = function(){
+  if(file.value === file.options[file.length-1].value){
+    input.click();
+    file.value = null;
+  }
+  else if(file.value === file.options[1].value){
+    readLocalFile("./data/covid19.txt", function(){
+      drawLineChart();
+      getAndDrawBarcode();
+    });
+  }
+  else if(file.value === file.options[2].value){
+    readLocalFile("./data/ele.txt", function(){
+      drawLineChart();
+      getAndDrawBarcode();
+    });
+  }
+  else if(file.value === file.options[3].value){
+    readLocalFile("./data/exchange.txt", function(){
+      drawLineChart();
+      getAndDrawBarcode();
+    });
+  }
+  else if(file.value === file.options[4].value){
+    readLocalFile("./data/solar.txt", function(){
+      drawLineChart();
+      getAndDrawBarcode();
+    });
+  }
+  else if(file.value === file.options[5].value){
+    readLocalFile("./data/traffic.txt", function(){
+      drawLineChart();
+      getAndDrawBarcode();
+    });
+  }
+}
+
+
+function readLocalFile(filename, callback){
   var xhr;
   if(window.XMLHttpRequest){
     xhr = new XMLHttpRequest();
@@ -40,31 +99,28 @@ function readFile(filename){
   xhr.send(null);
   xhr.onload = function(){
     if(xhr.status === 200){
-      var content = JSON.parse(xhr.responseText);
-      console.log(content);
+      // console.log(xhr.responseText);
+      var content = xhr.responseText;
+      datas.splice(0, datas.length);
+      // console.log(content);
+      var datalist = content.split("\n");
+      for(let i=0; i<  datalist.length; i++){
+        if(i > max_data_length) break;
+        if(datalist[i].length < 1) continue;
+        var dataEachTime = datalist[i].split(",");
+        if(Number(dataEachTime[0])!==Number(dataEachTime[0])){
+          var dataTime = [dataEachTime[0]];
+          dataTime.push.apply(dataTime, dataEachTime.slice(1, max_data_type+1).map(Number));
+          datas.push(dataTime);
+        }
+        else
+          datas.push(dataEachTime.slice(0, max_data_type+1).map(Number));
+      }
+      callback();
     }
   }
 }
-*/
 
-/* 暂时不考虑第一行是标签的情况 */
-
-function readTxtFile(filename, callback){
-  var reader = new FileReader();
-  reader.readAsText(filename);
-  reader.onload = function(e){
-    var content = e.target.result;
-    datas.splice(0, datas.length);
-    // console.log(content);
-    var datalist = content.split("\n");
-    for(let i=0; i<datalist.length; i++){
-      datas.push(datalist[i].split(",").map(Number));
-    }
-    // console.log(datas);
-    callback();
-  }
-
-}
 
 input.onchange = function(){
   var filelist = input.files;
@@ -77,17 +133,17 @@ input.onchange = function(){
 
 x_text.oninput = function(){
   x_range.value = x_text.value;
-  drawBarcode(x_range.value, y_range.value);
+  // drawBarcode(y_range.value);
 }
 x_range.oninput = function(){
   x_text.value = x_range.value;
-  drawBarcode(x_range.value, y_range.value);
+  // drawBarcode(y_range.value);
 }
 y_text.oninput = function(){
   y_range.value = y_text.value;
-  drawBarcode(x_range.value, y_range.value);
+  drawBarcode(y_range.value);
 }
 y_range.oninput = function(){
   y_text.value = y_range.value;
-  drawBarcode(x_range.value, y_range.value);
+  drawBarcode(y_range.value);
 }

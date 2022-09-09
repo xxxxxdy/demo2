@@ -16,101 +16,105 @@ const svg_b = d3.select(".barcode")
 const m_t = { top: 20, right: 20, bottom: 20, left: 20 };
 const m_b = { top: 20, right: 25, bottom: 20, left: 20 };
 
-var treeList = [];
+var barcodeList = [];
 var datalen = 0, unit = 0, unit2 = 0;
 
-function getExtremum(datas, index){
+function getExtremum(datas, idx, flag = false){
     let lens = datas.length;
-    if(lens < 1) return null;
+    if(lens < 2) return null;
     var extre_list = [];
+    if(flag ^ (datas[0][idx] < datas[1][idx])){
+        extre_list.push([datas[0][0], datas[0][idx]])
+    }
     for(let i=1; i<lens-1;i++){
-        let le = datas[i][index] - datas[i-1][index];
-        let ri = datas[i][index] - datas[i+1][index];
-        if((le<=0 && ri<0)||(le>0 && ri>=0)){
-            extre_list.push([datas[i][0], datas[i][index]]);
+        if((flag ^ (datas[i][idx] <= datas[i-1][idx]))
+            && ( flag ^ (datas[i][idx] < datas[i+1][idx]))){
+            extre_list.push([datas[i][0], datas[i][idx]]);
         }
+    }
+    if(flag ^ (datas[lens-1][idx] <= datas[lens-2][idx])){
+        extre_list.push([datas[lens-1][0], datas[lens-1][idx]])
     }
     return extre_list;
 }
 
-class scanTree{
-    constructor(leftp, rightp, leftc = null, rightc = null){
-        this.leftp = leftp;
-        this.rightp = rightp;
-        this.leftc = leftc;
-        this.rightc = rightc;
-        this.direction = leftp[1] < rightp[1];
+class Slope{
+    constructor(start){
+        this.start =  start;
+        this.end = null;
+        this.persistent = -1;
     }
 
-    show(depth = 0){
-        console.log("depth:", depth, "left point:", this.leftp, 
-            "right point:", this.rightp);
-        if(this.leftc !== null){
-            this.leftc.show(depth+1);
-            this.rightc.show(depth+1);
+    death(end){
+        this.end = end;
+        this.persistent = this.start[1] - end[1];
+    }
+}
+
+class Barcode{
+    constructor(begin, stop){
+        this.slist = [];
+        this.spoint = null;
+        this.begin = begin;
+        this.stop = stop;
+    }
+
+    borns(points){
+        // points is sort by key
+        for(let i=0; i<points.length; i++){
+            this.slist.push(new Slope(points[i]));
         }
     }
 
-    split(point){
-        this.leftc = new scanTree(this.leftp, point);
-        this.rightc = new scanTree(point, this.rightp);
-    }
+    kills(points){
+        // points is sort by value
+        for(let i=0; i<points.length; i++){
+            let le = -1, ri = -1;
+            for(let j=0; j<this.slist.length; j++){
+                if(this.slist[j].persistent === -1){
+                    if(this.slist[j].start[0] < points[i][0]) {
+                        le = j;
+                    }
+                    else{
+                        ri = j;
+                        break;
+                    }
+                }
+            }
 
-    subtree(point){
-        let curTree = this;
-        while(curTree.leftc !== null){
-            let p = curTree.leftc.rightp;
-            if (p[0] >= point[0])
-                curTree = curTree.leftc;
-            else
-                curTree = curTree.rightc;
-        }
-        return curTree;
-    }
+            let sidx = -1;
+            if(le !== -1){
+                if(ri !== -1){
+                    sidx = this.slist[le].start[1] < this.slist[ri].start[1] ? le : ri;
+                }
+                else sidx = le;
+            }
+            else sidx = ri;
 
-    insert(point){
-        let tmptree = this.subtree(point);
-        tmptree.split(point);
-    }
-
-    draw(depth = 0, unit = 1, start = 0, offset = 0, x_terminal = 0, y_terminal = 0){
-        var wi = unit*(this.rightp[0]-this.leftp[0])-offset;
-        var x = unit*(this.leftp[0]-start)+m_t.left;
-        var y = depth*55+m_t.top;
-        if(wi<5){
-            console.log("the area is small to show all the tree");
-            return null;
-        }
-        var color = this.direction === true ? "black" : "gray";
-        svg_t.append("rect")
-            .attr("x",x)
-            .attr("y",y)
-            .attr("width",wi)
-            .attr("height",50)
-            .attr("fill",color);
-        if(this.leftc !== null){
-            this.leftc.draw(depth+1, unit, start, 5);
-            this.rightc.draw(depth+1,unit, start, offset);
-        }
-        else if(y+50+m_t.bottom > svg_t.attr("height")){
-            svg_t.attr("height", y+50+m_t.bottom);
+            if(sidx === -1) {
+                this.spoint = points[i];
+                continue;
+            }
+            this.slist[sidx].death(points[i]);
         }
     }
 
-    simpleDraw(unit = 1, start = 0, y = 20, color = "black", x_terminal = 0, y_terminal = 0, type = 0){
-        if(this.leftc !== null){
-            if(((this.rightp[0]-this.leftp[0]) > x_terminal) && 
-                (Math.abs(this.rightp[1]-this.leftp[1]) > y_terminal))
-                color = this.direction === true ? "black" : "white";
-            this.leftc.simpleDraw(unit, start, y, color, x_terminal, y_terminal, type);
-            this.rightc.simpleDraw(unit, start, y, color,x_terminal, y_terminal, type);
+
+    simpleDraw(unit = 1, start = 0, y = 20, y_terminal = 0, type = 0){
+        let point_list = [this.begin, this.stop];
+        if(this.spoint !== null) point_list.push(this.spoint);
+        for(let i=0; i < this.slist.length; i++){
+            if(this.slist[i].persistent !== -1 && this.slist[i].persistent < y_terminal) continue;
+            point_list.push(this.slist[i].start);
+            if(this.slist[i].end !== null) point_list.push(this.slist[i].end);
         }
-        else{
-            var wi = unit*(this.rightp[0]-this.leftp[0]);
-            var x = unit*(this.leftp[0]-start)+m_b.left;
-            if(((this.rightp[0]-this.leftp[0]) > x_terminal) && 
-                (Math.abs(this.rightp[1]-this.leftp[1]) > y_terminal))
-                color = this.direction === true ? "black" : "white";
+
+        point_list.sort(function(a,b){return a[0]-b[0]});
+        for(let i=0;i<point_list.length-1;i++){
+            var wi = unit*(point_list[i+1][0]-point_list[i][0]);
+            var x = unit*(point_list[i][0]-start)+m_b.left;
+    
+            let color = point_list[i][1]<point_list[i+1][1] ? "black" : "white";
             svg_b.append("rect")
                 .attr("x",x)
                 .attr("y",y)
@@ -120,59 +124,66 @@ class scanTree{
                 .attr("class", type);
         }
     }
+
 }
 
-function drawBarcode(x_terminal = 0, y_terminal = 0){
+function drawBarcode(y_terminal = 0){
     svg_b.selectAll("*").remove();
-    let svg_b_height = 55*treeList.length+m_b.top+m_b.bottom-5;
+    let svg_b_height = 55*barcodeList.length+m_b.top+m_b.bottom-5;
     if(svg_b_height > height_b)
         svg_b.attr("height", svg_b_height);
-    for(let i=0; i<treeList.length;i++){
-        let color = treeList[i].direction === true ? "black" : "white";
-        treeList[i].simpleDraw(unit2, datas[0][0], 55*i+m_b.top, color, x_terminal, y_terminal, i);
+    else
+        svg_b.attr("height", height_b);
+    for(let i=0; i<barcodeList.length;i++){
+        barcodeList[i].simpleDraw(unit2, datas[0][0], 55*i+m_b.top, y_terminal, i);
     }
 
     svg_b.selectAll("rect")
         .on("click", function(d, i){
-            svg_t.selectAll("*").remove();
-            svg_t.attr("height", height_t);
+            // svg_t.selectAll("*").remove();
+            // svg_t.attr("height", height_t);
             let t = d3.select(this).attr("class");
-            treeList[t].draw(0, unit, datas[0][0]);
+            // barcodeList[t].draw(0, unit, datas[0][0]);
             t++;
-            g_l.selectAll("path").attr("stroke", "purple").attr("stroke-width",1);
-            g_l.select(".line_"+t).attr("stroke", "red").attr("stroke-width",3);
+            // 
+            g_l.selectAll(".line").attr("stroke", "blue").attr("stroke-width",1).attr("stroke-opacity",0.1);
+            g_l.select("#line_"+t).attr("stroke", "red").attr("stroke-width",3).attr("stroke-opacity",1.0);
+            console.log(barcodeList[t-1]);
         })
 
 }
 
 function getAndDrawBarcode(){
-    treeList.splice(0,treeList.length);
+    barcodeList.splice(0,barcodeList.length);
 
     datalen = (datas[datas.length-1][0] - datas[0][0]);
     unit = (width_t-m_t.left-m_t.right) / datalen;
     unit2 = (width_b-m_b.left-m_b.right) / datalen;
 
     for(let i=1; i<datas[0].length; i++){
-        var tlist = getExtremum(datas, i);
-        tlist.sort(function(a,b){ return a[1]-b[1]})
-            .reverse();
-        // console.log(tlist);
-        tree = new scanTree([datas[0][0], datas[0][i]],
-                [datas[datas.length-1][0], datas[datas.length-1][i]]);
-        for(let j=0; j<tlist.length;j++){
-            tree.insert([tlist[j][0], tlist[j][1]]);
-        }
-        treeList.push(tree);
+        var tmin = getExtremum(datas, i);
+        var tmax = getExtremum(datas, i, true);
+        // console.log(tmin, tmax);
+
+        tmin.sort(function(a,b){ return a[1]-b[1]}).reverse();
+        // tmax.sort(function(a,b){ return a[0]-b[0]});
+        
+        barcode = new Barcode([datas[0][0], datas[0][i]], 
+            [datas[datas.length-1][0], datas[datas.length-1][i]]);
+        barcode.borns(tmax);
+        barcode.kills(tmin);
+
+        barcodeList.push(barcode);
     }
 
+    // console.log(barcodeList);
     drawBarcode();
 
     // console.log(unit, width_t, data2[data2.length-1][0] - data2[0][0]);
     svg_t.selectAll("*").remove();
     svg_t.attr("height", height_t);
-    treeList[0].draw(0, unit, datas[0][0]);
 
-}
+}-
 
 // init
 getAndDrawBarcode();

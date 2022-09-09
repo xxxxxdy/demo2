@@ -219,8 +219,8 @@ main {
   padding: 2rem;
   color: #1f2027;
   display: grid;
-  grid-template-columns: 600px 380px;
-  grid-template-rows: 300px 220px;
+  grid-template-columns: 800px 600px;
+  grid-template-rows: 500px 200px;
   grid-gap: 20px;
 }
 
@@ -232,7 +232,7 @@ main {
   fill: #e4e2f5;
 }
 
-.barcode{
+.tree{
   grid-column: 1;
   grid-row: 2;
   margin-left: 10px;
@@ -242,7 +242,7 @@ main {
   fill: #e4e2f5;
 }
 
-.tree{
+.barcode{
   grid-column: 2;
   grid-row: 1 / 3;
   overflow-y: scroll;
